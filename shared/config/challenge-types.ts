@@ -24,6 +24,7 @@ const dialogue = 21;
 const fillInTheBlank = 22;
 const multifilePythonCertProject = 23;
 const generic = 24;
+const lab = 25;
 
 export const challengeTypes = {
   html,
@@ -51,7 +52,8 @@ export const challengeTypes = {
   dialogue,
   fillInTheBlank,
   multifilePythonCertProject,
-  generic
+  generic,
+  lab
 };
 
 export const hasNoSolution = (challengeType: number): boolean => {
@@ -92,20 +94,21 @@ export const viewTypes = {
   [step]: 'step',
   [quiz]: 'quiz',
   [backend]: 'backend',
-  [video]: 'video',
+  [video]: 'generic',
   [codeAllyPractice]: 'codeAlly',
   [codeAllyCert]: 'codeAlly',
   [multifileCertProject]: 'classic',
-  [theOdinProject]: 'odin',
+  [theOdinProject]: 'generic',
   [colab]: 'frontend',
   [exam]: 'exam',
   [msTrophy]: 'msTrophy',
-  [multipleChoice]: 'odin',
+  [multipleChoice]: 'generic',
   [python]: 'modern',
-  [dialogue]: 'dialogue',
+  [dialogue]: 'generic',
   [fillInTheBlank]: 'fillInTheBlank',
   [multifilePythonCertProject]: 'classic',
-  [generic]: 'generic'
+  [generic]: 'generic',
+  [lab]: 'classic'
 };
 
 // determine the type of submit function to use for the challenge on completion
@@ -137,5 +140,10 @@ export const submitTypes = {
   [dialogue]: 'tests',
   [fillInTheBlank]: 'tests',
   [multifilePythonCertProject]: 'tests',
-  [generic]: 'tests'
+  [generic]: 'tests',
+  [lab]: 'tests'
 };
+
+export const canSaveToDB = (challengeType: number): boolean =>
+  challengeType === challengeTypes.multifileCertProject ||
+  challengeType === challengeTypes.multifilePythonCertProject;

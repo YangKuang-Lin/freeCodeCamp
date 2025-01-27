@@ -16,6 +16,12 @@ import {
   createSuperRequest
 } from '../../../jest.utils';
 import { JWT_SECRET } from '../../utils/env';
+import {
+  clearEnvExam,
+  seedEnvExam,
+  seedEnvExamAttempt,
+  seedExamEnvExamAuthToken
+} from '../../../__mocks__/env-exam';
 import { getMsTranscriptApiUrl } from './user';
 
 const mockedFetch = jest.fn();
@@ -73,6 +79,13 @@ const testUserData: Prisma.userCreateInput = {
   ],
   partiallyCompletedChallenges: [{ id: '123', completedDate: 123 }],
   completedExams: [],
+  quizAttempts: [
+    {
+      challengeId: '66df3b712c41c499e9d31e5b',
+      quizId: '0',
+      timestamp: 1731924665902
+    }
+  ],
   githubProfile: 'github.com/foobar',
   website: 'https://www.freecodecamp.org',
   donationEmails: ['an@add.ress'],
@@ -206,6 +219,7 @@ const publicUserData = {
   ],
   completedExams: testUserData.completedExams,
   completedSurveys: [], // TODO: add surveys
+  quizAttempts: testUserData.quizAttempts,
   githubProfile: testUserData.githubProfile,
   is2018DataVisCert: testUserData.is2018DataVisCert,
   is2018FullStackCert: testUserData.is2018FullStackCert, // TODO: should this be returned? The client doesn't use it at the moment.
@@ -343,6 +357,7 @@ describe('userRoutes', () => {
         await fastifyTestInstance.prisma.msUsername.deleteMany({
           where: { OR: [{ userId: defaultUserId }, { userId: otherUserId }] }
         });
+        await clearEnvExam();
       });
 
       test('POST returns 200 status code with empty object', async () => {
@@ -397,6 +412,35 @@ describe('userRoutes', () => {
           ])
         );
         expect(setCookie).toHaveLength(3);
+      });
+
+      test("POST deletes all the user's exam attempts", async () => {
+        await seedEnvExam();
+        await seedEnvExamAttempt();
+        const countBefore =
+          await fastifyTestInstance.prisma.envExamAttempt.count();
+        expect(countBefore).toBe(1);
+
+        const res = await superPost('/account/delete');
+
+        const countAfter =
+          await fastifyTestInstance.prisma.envExamAttempt.count();
+        expect(countAfter).toBe(0);
+        expect(res.status).toBe(200);
+      });
+
+      test("POST deletes all the user's exam tokens", async () => {
+        await seedExamEnvExamAuthToken();
+        const countBefore =
+          await fastifyTestInstance.prisma.examEnvironmentAuthorizationToken.count();
+        expect(countBefore).toBe(1);
+
+        const res = await superPost('/account/delete');
+
+        const countAfter =
+          await fastifyTestInstance.prisma.examEnvironmentAuthorizationToken.count();
+        expect(countAfter).toBe(0);
+        expect(res.status).toBe(200);
       });
     });
 
@@ -564,6 +608,11 @@ describe('userRoutes', () => {
         await fastifyTestInstance.prisma.userToken.deleteMany({
           where: { id: userTokenId }
         });
+        await fastifyTestInstance.prisma.examEnvironmentAuthorizationToken.deleteMany(
+          {
+            where: { userId: defaultUserId }
+          }
+        );
       });
 
       test('GET rejects with 500 status code if the username is missing', async () => {
@@ -690,6 +739,7 @@ describe('userRoutes', () => {
           partiallyCompletedChallenges: [],
           portfolio: [],
           savedChallenges: [],
+          quizAttempts: [],
           yearsTopContributor: [],
           is2018DataVisCert: false,
           is2018FullStackCert: false,
@@ -1128,6 +1178,71 @@ Thanks and regards,
           type: 'success',
           message: 'flash.survey.success'
         });
+      });
+    });
+
+    describe('/user/exam-environment/token', () => {
+      afterEach(async () => {
+        await fastifyTestInstance.prisma.examEnvironmentAuthorizationToken.deleteMany(
+          {
+            where: { userId: defaultUserId }
+          }
+        );
+      });
+
+      test('POST generates a new token if one does not exist', async () => {
+        const response = await superPost('/user/exam-environment/token');
+        const { examEnvironmentAuthorizationToken } = response.body;
+
+        const decodedToken = jwt.decode(examEnvironmentAuthorizationToken);
+
+        expect(decodedToken).toStrictEqual({
+          examEnvironmentAuthorizationToken:
+            expect.stringMatching(/^[a-z0-9]{24}$/),
+          iat: expect.any(Number)
+        });
+
+        expect(() =>
+          jwt.verify(examEnvironmentAuthorizationToken, 'wrong-secret')
+        ).toThrow();
+        expect(() =>
+          jwt.verify(examEnvironmentAuthorizationToken, JWT_SECRET)
+        ).not.toThrow();
+
+        expect(response.status).toBe(201);
+      });
+
+      test('POST only allows for one token per user id', async () => {
+        const token =
+          await fastifyTestInstance.prisma.examEnvironmentAuthorizationToken.create(
+            {
+              data: {
+                userId: defaultUserId,
+                expireAt: new Date()
+              }
+            }
+          );
+
+        const response = await superPost('/user/exam-environment/token');
+
+        const { examEnvironmentAuthorizationToken } = response.body;
+
+        const decodedToken = jwt.decode(examEnvironmentAuthorizationToken);
+
+        expect(decodedToken).not.toHaveProperty(
+          'examEnvironmentAuthorizationToken',
+          token.id
+        );
+
+        expect(response.status).toBe(201);
+
+        const tokens =
+          await fastifyTestInstance.prisma.examEnvironmentAuthorizationToken.findMany(
+            {
+              where: { userId: defaultUserId }
+            }
+          );
+        expect(tokens).toHaveLength(1);
       });
     });
   });

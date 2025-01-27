@@ -45,7 +45,8 @@ export const config: EnvConfig = {
       numberOfCorrectAnswers: 1,
       numberOfIncorrectAnswers: 1
     }
-  ]
+  ],
+  retakeTimeInMS: 24 * 60 * 60 * 1000
 };
 
 export const questionSets: EnvQuestionSet[] = [
@@ -292,8 +293,7 @@ export const examAttempt: EnvExamAttempt = {
     }
   ],
   startTimeInMS: Date.now(),
-  userId: defaultUserId,
-  submissionTimeInMS: null
+  userId: defaultUserId
 };
 
 export const examAttemptSansSubmissionTimeInMS: Static<
@@ -338,13 +338,12 @@ export const examAttemptSansSubmissionTimeInMS: Static<
 export const exam: EnvExam = {
   id: examId,
   config,
-  questionSets
+  questionSets,
+  prerequisites: ['67112fe1c994faa2c26d0b1d']
 };
 
 export async function seedEnvExam() {
-  await fastifyTestInstance.prisma.envExamAttempt.deleteMany({});
-  await fastifyTestInstance.prisma.envGeneratedExam.deleteMany({});
-  await fastifyTestInstance.prisma.envExam.deleteMany({});
+  await clearEnvExam();
 
   await fastifyTestInstance.prisma.envExam.create({
     data: exam
@@ -367,4 +366,22 @@ export async function seedEnvExam() {
   //     //
   //   }
   // }
+}
+
+export async function clearEnvExam() {
+  await fastifyTestInstance.prisma.envExamAttempt.deleteMany({});
+  await fastifyTestInstance.prisma.envGeneratedExam.deleteMany({});
+  await fastifyTestInstance.prisma.envExam.deleteMany({});
+}
+
+export async function seedEnvExamAttempt() {
+  await fastifyTestInstance.prisma.envExamAttempt.create({
+    data: examAttempt
+  });
+}
+
+export async function seedExamEnvExamAuthToken() {
+  return fastifyTestInstance.prisma.examEnvironmentAuthorizationToken.create({
+    data: { userId: defaultUserId, expireAt: new Date(Date.now() + 60000) }
+  });
 }

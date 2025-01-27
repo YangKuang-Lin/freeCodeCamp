@@ -76,9 +76,6 @@ export const userRoutes: FastifyPluginCallbackTypebox = (
       await fastify.prisma.user.delete({
         where: { id: req.user!.id }
       });
-      await fastify.prisma.examEnvironmentAuthorizationToken.deleteMany({
-        where: { userId: req.user!.id }
-      });
       reply.clearOurCookies();
 
       return {};
@@ -397,10 +394,11 @@ async function examEnvironmentTokenHandler(
     }
   });
 
+  const ONE_YEAR_IN_MS = 365 * 24 * 60 * 60 * 1000;
+
   const token = await this.prisma.examEnvironmentAuthorizationToken.create({
     data: {
-      createdDate: new Date(),
-      id: customNanoid(),
+      expireAt: new Date(Date.now() + ONE_YEAR_IN_MS),
       userId
     }
   });
@@ -410,10 +408,9 @@ async function examEnvironmentTokenHandler(
     JWT_SECRET
   );
 
+  void reply.code(201);
   void reply.send({
-    data: {
-      examEnvironmentAuthorizationToken
-    }
+    examEnvironmentAuthorizationToken
   });
 }
 
@@ -449,6 +446,7 @@ export const userGetRoutes: FastifyPluginCallbackTypebox = (
             completedChallenges: true,
             completedExams: true,
             currentChallengeId: true,
+            quizAttempts: true,
             email: true,
             emailVerified: true,
             githubProfile: true,

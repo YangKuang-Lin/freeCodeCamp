@@ -128,16 +128,6 @@ const indexData: IndexData[] = [
     indexes: [{ key: { userId: 1 }, name: 'userId_1' }]
   },
   {
-    collection: 'UserRateLimit',
-    indexes: [
-      {
-        key: { expirationDate: 1 },
-        name: 'expirationDate_1',
-        expireAfterSeconds: 0
-      }
-    ]
-  },
-  {
     collection: 'UserToken',
     indexes: [{ key: { userId: 1 }, name: 'userId_1' }]
   },
@@ -207,6 +197,11 @@ export const defaultUserEmail = 'foo@bar.com';
 export const defaultUsername = 'fcc-test-user';
 
 export const resetDefaultUser = async (): Promise<void> => {
+  await fastifyTestInstance.prisma.examEnvironmentAuthorizationToken.deleteMany(
+    {
+      where: { userId: defaultUserId }
+    }
+  );
   await fastifyTestInstance.prisma.user.deleteMany({
     where: { email: defaultUserEmail }
   });

@@ -13,19 +13,28 @@ import {
   BilibiliIds
 } from '../../../redux/prop-types';
 import { isAuditedSuperBlock } from '../../../../../shared/utils/is-audited';
-import { BlockTypes } from '../../../../../shared/config/blocks';
+import { BlockLayouts, BlockTypes } from '../../../../../shared/config/blocks';
 import Block from './block';
 
 jest.mock('../../../../../shared/utils/is-audited', () => ({
   isAuditedSuperBlock: jest.fn().mockReturnValueOnce(true)
 }));
 
+jest.mock('../redux', () => ({
+  makeExpandedBlockSelector: jest.fn(() => jest.fn(() => true)),
+  completedChallengesSelector: jest.fn(() => [
+    { id: 'mockId', title: 'mockTitle' }
+  ])
+}));
+
 const defaultProps = {
   block: 'test-block',
+  blockType: null,
   challenges: [
     {
       block: 'testblock',
       blockType: BlockTypes.lab,
+      blockLayout: BlockLayouts.ChallengeGrid,
       certification: 'mockCertification',
       challengeOrder: 1,
       challengeType: 0,
@@ -67,7 +76,7 @@ const defaultProps = {
       },
       sourceInstanceName: 'mockSourceInstanceName',
       superOrder: 1,
-      superBlock: SuperBlocks.UpcomingPython,
+      superBlock: SuperBlocks.FullStackDeveloper,
       tail: ['mockTail'],
       template: 'mockTemplate',
       tests: [] as Test[],
@@ -82,9 +91,9 @@ const defaultProps = {
     }
   ],
   completedChallengeIds: ['testchallengeIds'],
-  isExpanded: false,
+  isExpanded: true,
   t: jest.fn((key: string) => [key]),
-  superBlock: SuperBlocks.RespWebDesign,
+  superBlock: SuperBlocks.FullStackDeveloper,
   toggleBlock: jest.fn()
 };
 

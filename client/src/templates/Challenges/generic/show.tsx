@@ -3,10 +3,12 @@ import React, { useEffect, useRef, useState } from 'react';
 import Helmet from 'react-helmet';
 import { useTranslation } from 'react-i18next';
 import { connect } from 'react-redux';
-import { Container, Col, Row, Button } from '@freecodecamp/ui';
+import { Container, Col, Row, Button, Spacer } from '@freecodecamp/ui';
+import { isEqual } from 'lodash';
+import store from 'store';
+import { YouTubeEvent } from 'react-youtube';
 
 // Local Utilities
-import Spacer from '../../../components/helpers/spacer';
 import LearnLayout from '../../../components/layouts/learn';
 import { ChallengeNode, ChallengeMeta, Test } from '../../../redux/prop-types';
 import ChallengeDescription from '../components/challenge-description';
@@ -24,6 +26,17 @@ import {
 } from '../redux/actions';
 import { isChallengeCompletedSelector } from '../redux/selectors';
 import { BlockTypes } from '../../../../../shared/config/blocks';
+import { getChallengePaths } from '../utils/challenge-paths';
+import Scene from '../components/scene/scene';
+import MultipleChoiceQuestions from '../components/multiple-choice-questions';
+import ChallengeExplanation from '../components/challenge-explanation';
+import ChallengeTranscript from '../components/challenge-transcript';
+import HelpModal from '../components/help-modal';
+import { SceneSubject } from '../components/scene/scene-subject';
+
+// Styles
+import './show.css';
+import '../video.css';
 
 // Redux Setup
 const mapStateToProps = (state: unknown) => ({
@@ -35,7 +48,8 @@ const mapDispatchToProps = {
   updateChallengeMeta,
   challengeMounted,
   updateSolutionFormValues,
-  openCompletionModal: () => openModal('completion')
+  openCompletionModal: () => openModal('completion'),
+  openHelpModal: () => openModal('help')
 };
 
 // Types
@@ -46,6 +60,7 @@ interface ShowQuizProps {
   initTests: (xs: Test[]) => void;
   isChallengeCompleted: boolean;
   openCompletionModal: () => void;
+  openHelpModal: () => void;
   pageContext: {
     challengeMeta: ChallengeMeta;
   };
@@ -63,12 +78,16 @@ const ShowGeneric = ({
         block,
         blockType,
         description,
+        explanation,
         challengeType,
-        fields: { tests },
+        fields: { blockName, tests },
         helpCategory,
         instructions,
+        questions,
         title,
+        transcript,
         translationPending,
+        scene,
         superBlock,
         videoId,
         videoLocaleIds
@@ -79,10 +98,10 @@ const ShowGeneric = ({
   initTests,
   updateChallengeMeta,
   openCompletionModal,
+  openHelpModal,
   isChallengeCompleted
 }: ShowQuizProps) => {
   const { t } = useTranslation();
-  const { nextChallengePath, prevChallengePath } = challengeMeta;
   const container = useRef<HTMLElement | null>(null);
 
   const blockNameTitle = `${t(
@@ -91,11 +110,15 @@ const ShowGeneric = ({
 
   useEffect(() => {
     initTests(tests);
+    const challengePaths = getChallengePaths({
+      currentCurriculumPaths: challengeMeta
+    });
     updateChallengeMeta({
       ...challengeMeta,
       title,
       challengeType,
-      helpCategory
+      helpCategory,
+      ...challengePaths
     });
     challengeMounted(challengeMeta.id);
     container.current?.focus();
@@ -103,27 +126,16 @@ const ShowGeneric = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => {
-    updateChallengeMeta({
-      ...challengeMeta,
-      title,
-      challengeType,
-      helpCategory
-    });
-    challengeMounted(challengeMeta.id);
-  }, [
-    title,
-    challengeMeta,
-    challengeType,
-    helpCategory,
-    challengeMounted,
-    updateChallengeMeta
-  ]);
-
   // video
   const [videoIsLoaded, setVideoIsLoaded] = useState(false);
 
-  const handleVideoIsLoaded = () => {
+  const handleVideoIsLoaded = (e: YouTubeEvent) => {
+    const playbackRate = Number(store.get('fcc-yt-playback-rate')) || 1;
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    const player = e.target;
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+    player.setPlaybackRate(playbackRate);
+
     setVideoIsLoaded(true);
   };
 
@@ -138,19 +150,55 @@ const ShowGeneric = ({
     setAssignmentsCompleted(a => (isCompleted ? a + 1 : a - 1));
   };
 
-  // submit
+  // multiple choice questions
+  const [selectedMcqOptions, setSelectedMcqOptions] = useState(
+    questions.map<number | null>(() => null)
+  );
+  const [submittedMcqAnswers, setSubmittedMcqAnswers] = useState(
+    questions.map<number | null>(() => null)
+  );
+
+  const [hasAnsweredMcqCorrectly, sethasAnsweredMcqCorrectly] = useState(true);
+
+  const [showFeedback, setShowFeedback] = useState(false);
+
+  const handleMcqOptionChange = (
+    questionIndex: number,
+    answerIndex: number
+  ): void => {
+    setSelectedMcqOptions(prev =>
+      prev.map((option, index) =>
+        index === questionIndex ? answerIndex : option
+      )
+    );
+  };
+
   const handleSubmit = () => {
-    if (assignments.length == 0 || allAssignmentsCompleted) {
+    const hasCompletedAssignments =
+      assignments.length === 0 || allAssignmentsCompleted;
+    const mcqSolutions = questions.map(question => question.solution - 1);
+    const mcqCorrect = isEqual(mcqSolutions, selectedMcqOptions);
+
+    setSubmittedMcqAnswers(selectedMcqOptions);
+    setShowFeedback(true);
+    if (hasCompletedAssignments && mcqCorrect) {
       openCompletionModal();
     }
+
+    if (mcqSolutions.length > selectedMcqOptions.length || !mcqCorrect) {
+      sethasAnsweredMcqCorrectly(false);
+    } else {
+      sethasAnsweredMcqCorrectly(true);
+    }
   };
+
+  const sceneSubject = new SceneSubject();
 
   return (
     <Hotkeys
       executeChallenge={handleSubmit}
       containerRef={container}
-      nextChallengePath={nextChallengePath}
-      prevChallengePath={prevChallengePath}
+      playScene={scene ? () => sceneSubject.notify() : undefined}
     >
       <LearnLayout>
         <Helmet
@@ -158,7 +206,7 @@ const ShowGeneric = ({
         />
         <Container>
           <Row>
-            <Spacer size='medium' />
+            <Spacer size='m' />
             <ChallengeTitle
               isCompleted={isChallengeCompleted}
               translationPending={translationPending}
@@ -166,31 +214,48 @@ const ShowGeneric = ({
               {title}
             </ChallengeTitle>
 
-            <Col md={8} mdOffset={2} sm={10} smOffset={1} xs={12}>
-              {description && (
-                <ChallengeDescription description={description} />
-              )}
-            </Col>
+            <Spacer size='m' />
+
+            {description && (
+              <Col md={8} mdOffset={2} sm={10} smOffset={1} xs={12}>
+                <ChallengeDescription
+                  description={description}
+                  superBlock={superBlock}
+                />
+                <Spacer size='m' />
+              </Col>
+            )}
 
             <Col lg={10} lgOffset={1} md={10} mdOffset={1}>
               {videoId && (
-                <VideoPlayer
-                  bilibiliIds={bilibiliIds}
-                  onVideoLoad={handleVideoIsLoaded}
-                  title={title}
-                  videoId={videoId}
-                  videoIsLoaded={videoIsLoaded}
-                  videoLocaleIds={videoLocaleIds}
-                />
+                <>
+                  <VideoPlayer
+                    bilibiliIds={bilibiliIds}
+                    onVideoLoad={handleVideoIsLoaded}
+                    title={title}
+                    videoId={videoId}
+                    videoIsLoaded={videoIsLoaded}
+                    videoLocaleIds={videoLocaleIds}
+                  />
+                  <Spacer size='m' />
+                </>
               )}
             </Col>
 
-            <Col md={8} mdOffset={2} sm={10} smOffset={1} xs={12}>
-              {instructions && (
-                <ChallengeDescription description={instructions} />
-              )}
+            {scene && <Scene scene={scene} sceneSubject={sceneSubject} />}
 
-              <Spacer size='medium' />
+            <Col md={8} mdOffset={2} sm={10} smOffset={1} xs={12}>
+              {transcript && <ChallengeTranscript transcript={transcript} />}
+
+              {instructions && (
+                <>
+                  <ChallengeDescription
+                    instructions={instructions}
+                    superBlock={superBlock}
+                  />
+                  <Spacer size='m' />
+                </>
+              )}
 
               {assignments.length > 0 && (
                 <Assignments
@@ -200,15 +265,38 @@ const ShowGeneric = ({
                 />
               )}
 
+              {questions.length > 0 && (
+                <MultipleChoiceQuestions
+                  questions={questions}
+                  selectedOptions={selectedMcqOptions}
+                  handleOptionChange={handleMcqOptionChange}
+                  submittedMcqAnswers={submittedMcqAnswers}
+                  showFeedback={showFeedback}
+                />
+              )}
+
+              {explanation ? (
+                <ChallengeExplanation explanation={explanation} />
+              ) : null}
+
+              {!hasAnsweredMcqCorrectly && (
+                <p className='text-center'>{t('learn.answered-mcq')}</p>
+              )}
+
               <Button block={true} variant='primary' onClick={handleSubmit}>
                 {blockType === BlockTypes.review
                   ? t('buttons.submit')
                   : t('buttons.check-answer')}
               </Button>
+              <Spacer size='xxs' />
+              <Button block={true} variant='primary' onClick={openHelpModal}>
+                {t('buttons.ask-for-help')}
+              </Button>
 
-              <Spacer size='large' />
+              <Spacer size='l' />
             </Col>
             <CompletionModal />
+            <HelpModal challengeTitle={title} challengeBlock={blockName} />
           </Row>
         </Container>
       </LearnLayout>
@@ -234,6 +322,7 @@ export const query = graphql`
         blockType
         challengeType
         description
+        explanation
         helpCategory
         instructions
         fields {
@@ -244,8 +333,54 @@ export const query = graphql`
             testString
           }
         }
+        questions {
+          text
+          answers {
+            answer
+            feedback
+          }
+          solution
+        }
+        scene {
+          setup {
+            background
+            characters {
+              character
+              position {
+                x
+                y
+                z
+              }
+              opacity
+            }
+            audio {
+              filename
+              startTime
+              startTimestamp
+              finishTimestamp
+            }
+            alwaysShowDialogue
+          }
+          commands {
+            background
+            character
+            position {
+              x
+              y
+              z
+            }
+            opacity
+            startTime
+            finishTime
+            dialogue {
+              text
+              align
+            }
+          }
+        }
         superBlock
         title
+        transcript
         translationPending
         videoId
         videoId

@@ -1,8 +1,8 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Spacer } from '@freecodecamp/ui';
 import { Question } from '../../../redux/prop-types';
-import Spacer from '../../../components/helpers/spacer';
 import ChallengeHeading from './challenge-heading';
 import PrismFormatted from './prism-formatted';
 
@@ -83,12 +83,13 @@ function MultipleChoiceQuestions({
                     <div
                       className={`video-quiz-option-label mcq-feedback ${isCorrect ? 'mcq-correct' : 'mcq-incorrect'}`}
                     >
-                      {isCorrect
-                        ? t('learn.quiz.correct-answer')
-                        : t('learn.quiz.incorrect-answer')}
+                      <p>
+                        {isCorrect
+                          ? t('learn.quiz.correct-answer')
+                          : t('learn.quiz.incorrect-answer')}
+                      </p>
                       {feedback && (
-                        <>
-                          <span>&nbsp;</span>
+                        <p>
                           <PrismFormatted
                             className={
                               isCorrect
@@ -99,7 +100,7 @@ function MultipleChoiceQuestions({
                             useSpan
                             noAria
                           />
-                        </>
+                        </p>
                       )}
                     </div>
                   )}
@@ -107,10 +108,10 @@ function MultipleChoiceQuestions({
               );
             })}
           </div>
-          <Spacer size='medium' />
+          <Spacer size='m' />
         </div>
       ))}
-      <Spacer size='medium' />
+      <Spacer size='m' />
     </>
   );
 }

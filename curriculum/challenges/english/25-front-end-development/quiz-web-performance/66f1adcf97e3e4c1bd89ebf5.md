@@ -7,7 +7,7 @@ dashedName: quiz-web-performance
 
 # --description--
 
-Answer all of the questions below correctly to pass the quiz.
+To pass the quiz, you must correctly answer at least 17 of the 20 questions below.
 
 # --quizzes--
 
@@ -285,7 +285,7 @@ Which Web API is effective for measuring performance in JavaScript?
 
 #### --distractors--
 
-`window.getPerformaceStatistics()`
+`window.getPerformanceStatistics()`
 
 ---
 

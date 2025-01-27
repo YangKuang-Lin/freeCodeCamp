@@ -1,19 +1,15 @@
 {
   "name": "HTML Fundamentals",
-  "isUpcomingChange": true,
-  "dashedName": "lecture-html-fundamentals",
-  "order": 4,
-  "superBlock": "front-end-development",
-  "helpCategory": "HTML-CSS",
   "blockType": "lecture",
+  "blockLayout": "challenge-list",
+  "isUpcomingChange": false,
+  "dashedName": "lecture-html-fundamentals",
+  "superBlock": "full-stack-developer",
+  "helpCategory": "HTML-CSS",
   "challengeOrder": [
     {
       "id": "670803abcb3e980233da4768",
-      "title": "What Are Divs and Spans, and When Should You Use Them?"
-    },
-    {
-      "id": "6708143cab2b583ecd3324f5",
-      "title": "What Are Attributes, and How Do They Work?"
+      "title": "What are Div Elements and When Should You Use Them?"
     },
     {
       "id": "6708382cf088b216580a9ff1",
@@ -37,7 +33,7 @@
     },
     {
       "id": "670839051794aa19fcef6dc8",
-      "title": "What Is UTF-8 Character Encoding and Why Is It Needed?"
+      "title": "What Is UTF-8 Character Encoding, and Why Is It Needed?"
     },
     {
       "id": "67083952f800051a8a21fcfd",
